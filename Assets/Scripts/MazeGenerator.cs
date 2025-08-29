@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -9,12 +8,17 @@ public class MazeGenerator : MonoBehaviour
 	private MazeCell _mazeCellPrefab;
 
 	[SerializeField]
+	private PlayerController _playerPrefab;
+
+	[SerializeField]
 	private int _mazeWidth;
 
 	[SerializeField]
 	private int _mazeDepth;
 
 	private MazeCell[,] _mazeGrid;
+
+	Vector3 spawnPoint;
 
     void Start()
     {
@@ -27,6 +31,11 @@ public class MazeGenerator : MonoBehaviour
 				_mazeGrid[x,z] = Instantiate(_mazeCellPrefab, new Vector3(x, 0, z), Quaternion.identity);
 			}
 		}
+
+		spawnPoint = _mazeGrid[0, 0].transform.position;
+		spawnPoint.y += 0.45f;
+
+		PlayerController player = Instantiate(_playerPrefab, spawnPoint, Quaternion.identity);
 
 		GenerateMaze(null, _mazeGrid[0, 0]);
     }
