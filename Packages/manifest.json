@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.cloudedmountain.ide.neovim": "file:/home/Kaffae/Downloads/NvimUnity/com.cloudedmountain.ide.neovim-master",
     "com.unity.collab-proxy": "2.9.2",
     "com.unity.feature.development": "1.0.2",
     "com.unity.inputsystem": "1.14.2",
