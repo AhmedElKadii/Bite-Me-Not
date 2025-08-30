@@ -3,13 +3,17 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-	public bool enableHeadbob = true;
+	public bool disableHeadbob = true;
 
 	public float sensitivity = 10f;
 	public float walkSpeed = 4f;
 	public float sprintSpeed = 10f;
 	public float jumpHeight = 18f;
 	public float groundDistance = 0.1f;
+
+	public bool canMove = false;
+
+	public float health { get; private set; }
 
 	public Camera cam;
 	public Animator anim;
@@ -21,6 +25,8 @@ public class PlayerController : MonoBehaviour
 	const int STATE_SPRINTING = 2;
 	const int STATE_DEFAULT = 3;
 
+	const float JOYSTICK_DEADZONE = 0.125f;
+
 	float xRotation = 0f;
 	float yRotation = 0f;
 
@@ -29,9 +35,9 @@ public class PlayerController : MonoBehaviour
 	InputAction lookAction;
 	InputAction moveAction;
 	InputAction jumpAction;
-	InputAction spritnAction;
+	InputAction sprintAction;
 
-	bool isUsingGamepad => lookAction.activeControl?.device is Gamepad;
+	bool isUsingGamepad => lookAction.activeControl?.device is Gamepad || moveAction.activeControl?.device is Gamepad;
 
 	bool isSprinting;
 
@@ -51,10 +57,11 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+		if (!canMove) return;
 		Headbob();
 		CameraLook();
 		ApplyGravity();
-		ToggleSprint();
+		HandleSprint();
 		MovePlayer();
     }
 
@@ -63,17 +70,16 @@ public class PlayerController : MonoBehaviour
 		lookAction = InputSystem.actions.FindAction("Look");
 		moveAction = InputSystem.actions.FindAction("Move");
 		jumpAction = InputSystem.actions.FindAction("Jump");
-		spritnAction = InputSystem.actions.FindAction("Sprint");
+		sprintAction = InputSystem.actions.FindAction("Sprint");
 	}
 
 	void Headbob()
 	{
-		if (enableHeadbob == true)
+		if (disableHeadbob == true)
 		{
 			anim.SetInteger("state", STATE_DEFAULT);
-			anim.StopPlayback();
+			return;
 		}
-		else anim.StartPlayback();
 
 		Vector2 input = moveAction.ReadValue<Vector2>();
 
@@ -118,12 +124,22 @@ public class PlayerController : MonoBehaviour
 		controller.Move(velocity * Time.deltaTime);
 	}
 
-	void ToggleSprint()
+	void HandleSprint()
 	{
 		Vector2 input = moveAction.ReadValue<Vector2>();
 
-		if (spritnAction.WasPerformedThisFrame()) isSprinting = true;
-		else if (input.magnitude < 0.125f) isSprinting = false;
+		if (isUsingGamepad)
+		{
+			// Toggle Sprint for controller
+			if (sprintAction.WasPerformedThisFrame() || sprintAction.IsPressed()) isSprinting = true;
+			else if (input.magnitude < JOYSTICK_DEADZONE) isSprinting = false;
+		}
+		else
+		{
+			// Hold Sprint for keyboard
+			if (sprintAction.IsPressed()) isSprinting = true;
+			else isSprinting = false;
+		}
 	}
 
 	void Jump() { velocity.y = Mathf.Sqrt(jumpHeight * -2f * GRAVITY); }
@@ -131,4 +147,8 @@ public class PlayerController : MonoBehaviour
 	bool isGrounded() { return Physics.CheckSphere(groundCheck.position, groundDistance, groundMask); }
 
 	void ApplyGravity() { velocity.y += GRAVITY*(isGrounded() ? 0 : 1); }
+
+	public void AddHealth(int value) { health += value; }
+
+	public void TakeDamage(int value) { health -= value; }
 }
