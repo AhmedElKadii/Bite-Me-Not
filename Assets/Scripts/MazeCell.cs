@@ -20,6 +20,8 @@ public class MazeCell : MonoBehaviour
 
 	public bool IsVisited { get; private set; }
 
+	public int walls = 4;
+
 	public void Visit()
 	{
 		IsVisited = true;
@@ -32,8 +34,27 @@ public class MazeCell : MonoBehaviour
 		transform.localScale = scale;
 	}
 
-	public void ClearLeftWall()  { _leftWall.SetActive(false);  }
-	public void ClearRightWall() { _rightWall.SetActive(false); }
-	public void ClearFrontWall() { _frontWall.SetActive(false); }
-	public void ClearBackWall()  { _backWall.SetActive(false);  }
+	public void ClearLeftWall()
+	{ 
+		_leftWall.SetActive(false); 
+		walls--;
+	}
+
+	public void ClearRightWall() 
+	{
+		_rightWall.SetActive(false); 
+		walls--;
+	}
+
+	public void ClearFrontWall() 
+	{ 
+		_frontWall.SetActive(false); 
+		walls--;
+	}
+
+	public void ClearBackWall() 
+	{ 
+		_backWall.SetActive(false); 
+		walls--;
+	}
 }

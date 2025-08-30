@@ -1,6 +1,9 @@
 using UnityEngine;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Utilities;
 
 public class MazeGenerator : MonoBehaviour
 {
@@ -11,39 +14,69 @@ public class MazeGenerator : MonoBehaviour
 	private PlayerController _playerPrefab;
 
 	[SerializeField]
+	private CookieManager _cookiePrefab;
+
+	[SerializeField]
 	private int _mazeWidth;
 
 	[SerializeField]
 	private int _mazeDepth;
 
 	private MazeCell[,] _mazeGrid;
+	private bool[,] _cookieGrid;
+
+	bool skip = false;
 
 	Vector3 spawnPoint;
 
-    void Start()
+    IEnumerator Start()
     {
 		_mazeGrid = new MazeCell[_mazeWidth, _mazeDepth];
+		_cookieGrid = new bool[_mazeWidth, _mazeDepth];
 
 		for (int x = 0; x < _mazeWidth; x++)
 		{
 			for (int z = 0; z < _mazeDepth; z++)
 			{
 				_mazeGrid[x,z] = Instantiate(_mazeCellPrefab, new Vector3(x, 0, z), Quaternion.identity);
+				_mazeGrid[x,z].transform.parent = transform;
+				_cookieGrid[x,z] = false;
 			}
 		}
 
-		spawnPoint = _mazeGrid[0, 0].transform.position;
+		int i = _mazeWidth/2;
+		int j = _mazeDepth/2;
+
+		spawnPoint = _mazeGrid[i, j].transform.position;
 		spawnPoint.y += 0.45f;
 
 		PlayerController player = Instantiate(_playerPrefab, spawnPoint, Quaternion.identity);
+		GameManager.Instance.player = player.gameObject;
 
-		GenerateMaze(null, _mazeGrid[0, 0]);
+		player.canMove = false;
+
+		yield return StartCoroutine(GenerateMaze(null, _mazeGrid[0, 0]));
+
+		Animator[] anims = player.GetComponentsInChildren<Animator>();
+
+		foreach (Animator anim in anims)
+		{
+			anim.SetTrigger("StartGame");
+		}
+
+		player.canMove = true;
+
+		GameManager.Instance.sun.GetComponent<Animator>().SetTrigger("StartGame");
     }
 
-	private void GenerateMaze(MazeCell previousCell, MazeCell currentCell)
+	void Update() { InputSystem.onAnyButtonPress.Call(currentAction => { skip = true; }); }
+
+	private IEnumerator GenerateMaze(MazeCell previousCell, MazeCell currentCell)
 	{
 		currentCell.Visit();
 		ClearWalls(previousCell, currentCell);
+
+		if (!skip) yield return new WaitForEndOfFrame();
 
 		MazeCell nextCell;
 
@@ -52,9 +85,30 @@ public class MazeGenerator : MonoBehaviour
 
 			if (nextCell != null)
 			{
-				GenerateMaze(currentCell, nextCell);
+				yield return GenerateMaze(currentCell, nextCell);
 			}
 		} while (nextCell != null);
+
+		for (int x = 0; x < _mazeWidth; x++)
+		{
+			for (int z = 0; z < _mazeDepth; z++)
+			{
+				if (_cookieGrid[x,z] == false && _mazeGrid[x,z].walls == 3)
+				{
+					if ((x | z) == 0) continue;
+
+					Vector3 pos = _mazeGrid[x,z].transform.position;
+					pos.y += 0.2f;
+
+					if (Random.Range(0, 100) > 60)
+					{
+						CookieManager cookie = Instantiate(_cookiePrefab, pos, Quaternion.identity);
+					}
+
+					_cookieGrid[x,z] = true;
+				}
+			}
+		}
 	}
 
 	private MazeCell GetNextUnvisitedCell(MazeCell currentCell)
